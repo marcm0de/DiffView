@@ -2,10 +2,29 @@
 
 import { useDiffStore } from '@/store/diff-store';
 import { computeLineDiff, DiffLine, DiffWord } from '@/lib/diff-utils';
+import { detectLanguage, tokenize, TOKEN_COLORS, Language } from '@/lib/syntax';
 import { useMemo } from 'react';
 
-function renderWords(words: DiffWord[] | undefined, content: string, type: DiffLine['type'], theme: string) {
+function renderSyntaxTokens(content: string, language: Language, theme: string) {
+  const tokens = tokenize(content, language);
+  const colors = theme === 'dark' ? TOKEN_COLORS.dark : TOKEN_COLORS.light;
+  return (
+    <>
+      {tokens.map((token, i) => (
+        <span key={i} className={colors[token.type] || ''}>
+          {token.text}
+        </span>
+      ))}
+    </>
+  );
+}
+
+function renderWords(words: DiffWord[] | undefined, content: string, type: DiffLine['type'], theme: string, language?: Language, syntaxEnabled?: boolean) {
   if (!words || words.length === 0) {
+    // Apply syntax highlighting to unchanged/plain content when enabled
+    if (syntaxEnabled && language && language !== 'plain' && type === 'unchanged' && content) {
+      return renderSyntaxTokens(content, language, theme);
+    }
     return <span>{content || '\u00A0'}</span>;
   }
 
@@ -34,8 +53,9 @@ function renderWords(words: DiffWord[] | undefined, content: string, type: DiffL
 }
 
 export default function SideBySideDiff() {
-  const { original, modified, theme } = useDiffStore();
+  const { original, modified, theme, syntaxHighlight: syntaxEnabled } = useDiffStore();
   const pairs = useMemo(() => computeLineDiff(original, modified), [original, modified]);
+  const language = useMemo(() => syntaxEnabled ? detectLanguage(original || modified) : 'plain' as Language, [original, modified, syntaxEnabled]);
 
   const hasContent = original.length > 0 || modified.length > 0;
   if (!hasContent) return null;
@@ -92,7 +112,7 @@ export default function SideBySideDiff() {
             </div>
             <div className={prefixStyle(pair.left.type)}>{prefixChar(pair.left.type)}</div>
             <div className={lineContentStyle(pair.left.type)}>
-              {renderWords(pair.left.words, pair.left.content, pair.left.type, theme)}
+              {renderWords(pair.left.words, pair.left.content, pair.left.type, theme, language, syntaxEnabled)}
             </div>
           </div>
         ))}
@@ -107,7 +127,7 @@ export default function SideBySideDiff() {
             </div>
             <div className={prefixStyle(pair.right.type)}>{prefixChar(pair.right.type)}</div>
             <div className={lineContentStyle(pair.right.type)}>
-              {renderWords(pair.right.words, pair.right.content, pair.right.type, theme)}
+              {renderWords(pair.right.words, pair.right.content, pair.right.type, theme, language, syntaxEnabled)}
             </div>
           </div>
         ))}

@@ -2,11 +2,27 @@
 
 import { useDiffStore } from '@/store/diff-store';
 import { computeInlineDiff, DiffLine } from '@/lib/diff-utils';
+import { detectLanguage, tokenize, TOKEN_COLORS, Language } from '@/lib/syntax';
 import { useMemo } from 'react';
 
+function renderSyntaxLine(content: string, language: Language, theme: string) {
+  const tokens = tokenize(content, language);
+  const colors = theme === 'dark' ? TOKEN_COLORS.dark : TOKEN_COLORS.light;
+  return (
+    <>
+      {tokens.map((token, i) => (
+        <span key={i} className={colors[token.type] || ''}>
+          {token.text}
+        </span>
+      ))}
+    </>
+  );
+}
+
 export default function InlineDiff() {
-  const { original, modified, theme } = useDiffStore();
+  const { original, modified, theme, syntaxHighlight: syntaxEnabled } = useDiffStore();
   const lines = useMemo(() => computeInlineDiff(original, modified), [original, modified]);
+  const language = useMemo(() => syntaxEnabled ? detectLanguage(original || modified) : 'plain' as Language, [original, modified, syntaxEnabled]);
 
   const hasContent = original.length > 0 || modified.length > 0;
   if (!hasContent) return null;
@@ -55,7 +71,9 @@ export default function InlineDiff() {
           </div>
           <div className={prefixStyle(line.type)}>{prefixChar(line.type)}</div>
           <div className={lineContentStyle(line.type)}>
-            {line.content || '\u00A0'}
+            {syntaxEnabled && language !== 'plain' && line.type === 'unchanged' && line.content
+              ? renderSyntaxLine(line.content, language, theme)
+              : (line.content || '\u00A0')}
           </div>
         </div>
       ))}

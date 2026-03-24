@@ -11,6 +11,7 @@ import {
   Share2,
   Copy,
   FileUp,
+  Palette,
 } from 'lucide-react';
 import { encodeShareUrl, createUnifiedPatch } from '@/lib/diff-utils';
 import { useRef } from 'react';
@@ -21,10 +22,12 @@ export default function Header() {
     modified,
     viewMode,
     theme,
+    syntaxHighlight,
     setOriginal,
     setModified,
     setViewMode,
     toggleTheme,
+    toggleSyntaxHighlight,
     swapSides,
     clear,
   } = useDiffStore();
@@ -149,6 +152,15 @@ export default function Header() {
         <button onClick={handleShare} className={`${btnBase} ${btnStyle}`} title="Share via URL">
           <Share2 size={15} />
           Share
+        </button>
+
+        <button
+          onClick={toggleSyntaxHighlight}
+          className={`${btnBase} ${syntaxHighlight ? activeBtnStyle : btnStyle}`}
+          title="Toggle syntax highlighting"
+        >
+          <Palette size={15} />
+          Syntax
         </button>
 
         <button onClick={clear} className={`${btnBase} ${btnStyle}`} title="Clear all">
